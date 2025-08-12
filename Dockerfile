@@ -65,10 +65,8 @@ COPY --from=build /src/bin/Release/net8.0/ ./
 
 EXPOSE 80
 
-# Define as variáveis para o dashboard funcionar
+# Para o dashboard
 ENV ASPNETCORE_URLS=http://+:80
-ENV DOTNET_DASHBOARD_OTLP_ENDPOINT_URL=""
-# Se usar HTTP endpoint ao invés de OTLP, defina também
-ENV DOTNET_DASHBOARD_OTLP_HTTP_ENDPOINT_URL=""
+ENV DOTNET_DASHBOARD_OTLP_HTTP_ENDPOINT_URL=http://localhost:5003
 
 ENTRYPOINT ["dotnet", "aspire.AppHost.dll"]
