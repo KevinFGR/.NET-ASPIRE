@@ -1,72 +1,35 @@
-# FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-# WORKDIR /src
-
-# COPY aspire.AppHost.csproj ./
-# RUN dotnet restore
-
-# COPY . ./
-# RUN dotnet publish -c Release -o /app/publish
-
-# FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
-# WORKDIR /app
-# COPY --from=build /app/publish ./
-# ENV ASPNETCORE_URLS=http://+:80
-# EXPOSE 80
-# ENTRYPOINT ["dotnet", "aspire.AppHost.dll"]
-
-
-# # Etapa 1: build
-# FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-# WORKDIR /src
-
-# RUN dotnet workload install aspire
-
-# COPY . .
-# RUN dotnet restore
-
-# RUN dotnet publish aspire.AppHost.csproj -c Release -o /app/publish
-
-# # Etapa 2: runtime
-# FROM mcr.microsoft.com/dotnet/runtime:8.0 AS final
-# WORKDIR /app
-
-# COPY --from=build /app/publish .
-
-# ENTRYPOINT ["dotnet", "aspire.AppHost.dll"]
-
-
-# FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-# WORKDIR /src
-
-# RUN dotnet workload install aspire
-# COPY . .
-# RUN dotnet build -c Release
-
-# FROM mcr.microsoft.com/dotnet/aspnet:8.0
-# WORKDIR /app
-
-# COPY --from=build /src/bin/Release/net8.0/ ./
-
-# EXPOSE 80
-
-# ENTRYPOINT ["dotnet", "aspire.AppHost.dll"]
-
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
-
 RUN dotnet workload install aspire
 COPY . .
+
+# Restaura pacotes incluindo o Aspire Linux x64
+RUN dotnet restore /p:RuntimeIdentifier=linux-x64
+
 RUN dotnet build -c Release
+
+# Copia o pacote Aspire.Hosting.Orchestration para ser usado no container final
+RUN mkdir -p /src/nuget_packages && \
+    cp -r ~/.nuget/packages/aspire.hosting.orchestration.linux-x64 /src/nuget_packages/
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 
+# Instala Docker CLI no container
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends docker.io && \
+    rm -rf /var/lib/apt/lists/*
+
 COPY --from=build /src/bin/Release/net8.0/ ./
+
+# Copia o pacote Aspire.Hosting.Orchestration para o local esperado
+COPY --from=build /src/nuget_packages/aspire.hosting.orchestration.linux-x64 /root/.nuget/packages/aspire.hosting.orchestration.linux-x64/
 
 EXPOSE 80
 
-# Para o dashboard
-ENV ASPNETCORE_URLS=http://+:80
+# Variáveis para rodar sem HTTPS obrigatório
+ENV ASPIRE_ALLOW_UNSECURED_TRANSPORT=true
+ENV ASPNETCORE_URLS=http://0.0.0.0:80
 ENV DOTNET_DASHBOARD_OTLP_HTTP_ENDPOINT_URL=http://localhost:5003
 
 ENTRYPOINT ["dotnet", "aspire.AppHost.dll"]
