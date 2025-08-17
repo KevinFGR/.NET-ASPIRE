@@ -8,8 +8,8 @@ builder.AddContainer("test-nagular", "kevinfgr/test-angular").WithHttpEndpoint(t
 
 builder.Build().Run();
 
-
-// // observaçõe para rodar em deploy
+// test
+// // observaçõe para rodar em deploy 
 // using Microsoft.Extensions.Hosting.WindowsServices;
 
 // var builder = DistributedApplication.CreateBuilder(args);
